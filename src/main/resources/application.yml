@@ -1,5 +1,13 @@
 # 公共配置文件
-
+server:
+  address: 0.0.0.0
+  port: 8123
+  servlet:
+    context-path: /api
+    # cookie 30 天过期
+    session:
+      cookie:
+        max-age: 2592000
 spring:
   application:
     name: tao-picture-backend
@@ -36,15 +44,6 @@ spring:
     multipart:
       # 大小限制
       max-file-size: 10MB
-server:
-  address: 0.0.0.0
-  port: 8101
-  servlet:
-    context-path: /api
-    # cookie 30 天过期
-    session:
-      cookie:
-        max-age: 2592000
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
