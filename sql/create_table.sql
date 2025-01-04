@@ -24,3 +24,13 @@ create table if not exists user
     UNIQUE KEY uk_userAccount (userAccount),
     INDEX idx_userName (userName)
 ) comment '用户' collate = utf8mb4_unicode_ci;
+
+-- 会员功能
+# vipExpireTime datetime     null comment '会员过期时间',
+# vipCode       varchar(128) null comment '会员兑换码',
+# vipNumber     bigint       null comment '会员编号'
+
+-- 分享功能
+# shareCode     varchar(20)  DEFAULT NULL COMMENT '分享码',
+# inviteUser    bigint       DEFAULT NULL COMMENT '邀请用户 id'
+
