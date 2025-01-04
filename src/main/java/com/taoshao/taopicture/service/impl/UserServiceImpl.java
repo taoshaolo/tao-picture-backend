@@ -37,7 +37,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     /**
      * 盐值，混淆密码
      */
-    public static final String SALT = "yupi";
+    public static final String SALT = "taoshao";
 
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
@@ -69,6 +69,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             User user = new User();
             user.setUserAccount(userAccount);
             user.setUserPassword(encryptPassword);
+            user.setUserName("无名");
+            user.setUserAvatar("https://img2.baidu.com/it/u=3757717885,1354144748&fm=253&fmt=auto&app=120&f=JPEG?w=500&h=500");
             boolean saveResult = this.save(user);
             if (!saveResult) {
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
