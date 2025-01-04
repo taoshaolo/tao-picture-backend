@@ -2,10 +2,10 @@
 
 
 -- 创建库
-create database if not exists my_db;
+create database if not exists tao_picture;
 
 -- 切换库
-use my_db;
+use tao_picture;
 
 -- 用户表
 create table if not exists user
