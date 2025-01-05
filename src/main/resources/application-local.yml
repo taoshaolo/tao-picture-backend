@@ -11,9 +11,7 @@ server:
 spring:
   application:
     name: tao-picture-backend
-  # 默认 dev 环境
-  profiles:
-    active: dev
+
   # 支持 swagger3
   mvc:
     pathmatch:
@@ -57,11 +55,11 @@ mybatis-plus:
 # 对象存储配置（需要从腾讯云获取）
 cos:
   client:
-    host: xxx
-    secretId: xxx
-    secretKey: xxx
-    region: xxx
-    bucket: xxx
+    host: https://taopicture-1325680272.cos.ap-beijing.myqcloud.com
+    SecretId: AKIDeGguwkMkvujMlxvgEYeWAanmY8VghV5R
+    SecretKey: EF2bv76tVv86qX3OWQ5Wrzub4JK7g3DC
+    region: ap-beijing
+    bucket: taopicture-1325680272
 
 # 接口文档配置
 knife4j:
