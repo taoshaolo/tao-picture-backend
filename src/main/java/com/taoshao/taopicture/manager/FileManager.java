@@ -22,12 +22,13 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Cos 对象存储操作
- *
+ * 文件服务
+ * @deprecated 已废弃，改为使用 upload 包的模板方法优化
  * @author taoshao
  */
 @Slf4j
 @Service
+@Deprecated
 public class FileManager {
 
     @Resource
@@ -65,7 +66,7 @@ public class FileManager {
             String format = imageInfo.getFormat();
             int picWidth = imageInfo.getWidth();
             int picHeight = imageInfo.getHeight();
-            double picScale = NumberUtil.round(picWidth * 1.0 / picHeight , 2).doubleValue();
+            double picScale = NumberUtil.round(picWidth * 1.0 / picHeight, 2).doubleValue();
             // 封装返回结果
             UploadPictureResult uploadPictureResult = new UploadPictureResult();
             uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + uploadPath);
@@ -108,9 +109,10 @@ public class FileManager {
 
     /**
      * 清理临时文件
+     *
      * @param file
      */
-    public static void deleteTempFile(File file) {
+    public void deleteTempFile(File file) {
         if (file == null) {
             return;
         }
