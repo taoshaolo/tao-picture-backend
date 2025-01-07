@@ -1,5 +1,6 @@
 package com.taoshao.taopicture.manager.upload;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.NumberUtil;
@@ -7,8 +8,11 @@ import cn.hutool.core.util.RandomUtil;
 import com.qcloud.cos.model.PutObjectResult;
 import java.io.File;
 import java.util.Date;
+import java.util.List;
 
+import com.qcloud.cos.model.ciModel.persistence.CIObject;
 import com.qcloud.cos.model.ciModel.persistence.ImageInfo;
+import com.qcloud.cos.model.ciModel.persistence.ProcessResults;
 import com.taoshao.taopicture.common.ErrorCode;
 import com.taoshao.taopicture.config.CosClientConfig;
 import com.taoshao.taopicture.exception.BusinessException;
@@ -55,7 +59,22 @@ public abstract class AbstractPictureUploadTemplate {
             // 4. 上传图片到对象存储  
             PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
-  
+
+            // 获取到图片处理结果
+            ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
+            List<CIObject> objectList = processResults.getObjectList();
+            if (CollUtil.isNotEmpty(objectList)){
+                // 获取压缩之后得到的为文件信息
+                CIObject compressedCiObject = objectList.get(0);
+                // 缩略图默认是压缩图
+                CIObject thumbnailCiObject = compressedCiObject;
+                // 有生成缩略图，才获取缩略图
+                if (objectList.size() > 1) {
+                    thumbnailCiObject = objectList.get(1);
+                }
+                // 封装返回结果
+                return buildResult(originFilename, compressedCiObject,thumbnailCiObject);
+            }
             // 5. 封装返回结果  
             return buildResult(originFilename, file, uploadPath, imageInfo);  
         } catch (Exception e) {  
@@ -65,8 +84,33 @@ public abstract class AbstractPictureUploadTemplate {
             // 6. 清理临时文件  
             deleteTempFile(file);  
         }  
-    }  
-  
+    }
+
+    /**
+     * 封装返回结果
+     * @param originFilename 原始文件名
+     * @param compressedCiObject 压缩后的对象
+     * @param thumbnailCiObject 缩略图对象
+     * @return
+     */
+    private UploadPictureResult buildResult(String originFilename, CIObject compressedCiObject, CIObject thumbnailCiObject) {
+        UploadPictureResult uploadPictureResult = new UploadPictureResult();
+        int picWidth = compressedCiObject.getWidth();
+        int picHeight = compressedCiObject.getHeight();
+        double picScale = NumberUtil.round(picWidth * 1.0 / picHeight, 2).doubleValue();
+        uploadPictureResult.setPicName(FileUtil.mainName(originFilename));
+        uploadPictureResult.setPicWidth(picWidth);
+        uploadPictureResult.setPicHeight(picHeight);
+        uploadPictureResult.setPicScale(picScale);
+        uploadPictureResult.setPicFormat(compressedCiObject.getFormat());
+        uploadPictureResult.setPicSize(compressedCiObject.getSize().longValue());
+        // 设置压缩后的原图地址
+        uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + compressedCiObject.getKey());
+        // 设置可访问的地址
+        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
+        return uploadPictureResult;
+    }
+
     /**  
      * 校验输入源（本地文件或 URL）  
      */  
