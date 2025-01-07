@@ -1,45 +1,43 @@
 package com.taoshao.taopicture.controller;
 
-import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.qcloud.cos.model.COSObject;
-import com.qcloud.cos.model.COSObjectInputStream;
-import com.qcloud.cos.utils.IOUtils;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.taoshao.taopicture.annotation.AuthCheck;
 import com.taoshao.taopicture.common.BaseResponse;
 import com.taoshao.taopicture.common.DeleteRequest;
 import com.taoshao.taopicture.common.ErrorCode;
 import com.taoshao.taopicture.common.ResultUtils;
-import com.taoshao.taopicture.constant.FileConstant;
 import com.taoshao.taopicture.constant.UserConstant;
 import com.taoshao.taopicture.exception.BusinessException;
 import com.taoshao.taopicture.exception.ThrowUtils;
-import com.taoshao.taopicture.manager.CosManager;
-import com.taoshao.taopicture.model.dto.file.UploadFileRequest;
 import com.taoshao.taopicture.model.dto.picture.*;
 import com.taoshao.taopicture.model.entity.Picture;
 import com.taoshao.taopicture.model.entity.User;
-import com.taoshao.taopicture.model.enums.FileUploadBizEnum;
 import com.taoshao.taopicture.model.enums.PictureReviewStatusEnum;
 import com.taoshao.taopicture.model.vo.PictureTagCategory;
 import com.taoshao.taopicture.model.vo.PictureVO;
 import com.taoshao.taopicture.service.PictureService;
 import com.taoshao.taopicture.service.UserService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 图片接口
@@ -56,6 +54,17 @@ public class PictureController {
 
     @Resource
     private PictureService pictureService;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+    private final Cache<String, String> LOCAL_CACHE = Caffeine.newBuilder()
+            .initialCapacity(1024)
+            .maximumSize(10000L)
+            // 缓存 5 分钟移除
+            .expireAfterWrite(5L, TimeUnit.MINUTES)
+            .build();
+
 
     /**
      * 上传图片（可重新上传）
@@ -196,6 +205,91 @@ public class PictureController {
                 pictureService.getQueryWrapper(pictureQueryRequest));
         // 获取封装类
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
+    }
+
+    /**
+     * 分页获取图片列表（封装类，有缓存）
+     */
+    @PostMapping("/list/page/vo/cache")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
+                                                                      HttpServletRequest request) {
+        long current = pictureQueryRequest.getCurrent();
+        long size = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 普通用户默认只能看到审核通过的数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        // 构建缓存的 key
+        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
+        String hashKey = DigestUtil.md5Hex(queryCondition.getBytes());
+        String redisKey = String.format("taopicture:listPictureVOByPage:%s", hashKey);
+        // 先查缓存
+        // 操作redis
+        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+        String cachedValue = opsForValue.get(redisKey);
+        if (cachedValue != null) {
+            //如果缓存命中，返回结果
+            Page<PictureVO> cachePage = JSONUtil.toBean(cachedValue, Page.class);
+            return ResultUtils.success(cachePage);
+        }
+        // 查询数据库
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
+                pictureService.getQueryWrapper(pictureQueryRequest));
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        // 存入 redis 缓存
+        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
+        // 设置缓存过期时间，5-10 分钟过期，防止缓存雪崩
+        int cacheExpireTime = 300 + RandomUtil.randomInt(0, 300);
+        opsForValue.set(redisKey, cacheValue, cacheExpireTime, TimeUnit.SECONDS);
+        // 获取封装类
+        return ResultUtils.success(pictureVOPage);
+    }
+
+    /**
+     * 分页获取图片列表（封装类，多级缓存实现）
+     */
+    @PostMapping("/list/page/vo/multiLevelCache")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithMultiLevelCache(@RequestBody PictureQueryRequest pictureQueryRequest,
+                                                                      HttpServletRequest request) {
+        long current = pictureQueryRequest.getCurrent();
+        long size = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 普通用户默认只能看到审核通过的数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        // 构建缓存的 key
+        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
+        String hashKey = DigestUtil.md5Hex(queryCondition.getBytes());
+        String redisKey = String.format("taopicture:listPictureVOByPage:%s", hashKey);
+        // 先查本地缓存
+        String cachedValue = LOCAL_CACHE.getIfPresent(redisKey);
+        if (cachedValue!= null) {
+            // 如果本地缓存命中，返回结果
+            Page<PictureVO> cachePage = JSON.parseObject(cachedValue, new TypeReference<Page<PictureVO>>() {});
+            return ResultUtils.success(cachePage);
+        }
+        // 再查 Redis 缓存
+        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+        cachedValue = opsForValue.get(redisKey);
+        if (cachedValue!= null) {
+            // 如果 Redis 缓存命中，将数据存入本地缓存并返回结果
+            LOCAL_CACHE.put(redisKey, cachedValue);
+            Page<PictureVO> cachePage = JSON.parseObject(cachedValue, new TypeReference<Page<PictureVO>>() {});
+            return ResultUtils.success(cachePage);
+        }
+        // 查询数据库
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
+                pictureService.getQueryWrapper(pictureQueryRequest));
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        // 存入 Redis 缓存
+        String cacheValue = JSON.toJSONString(pictureVOPage);
+        // 设置 Redis 缓存过期时间，5-10 分钟过期，防止缓存雪崩
+        int cacheExpireTime = 300 + new Random().nextInt(301);
+        opsForValue.set(redisKey, cacheValue, cacheExpireTime, TimeUnit.SECONDS);
+        // 存入本地缓存
+        LOCAL_CACHE.put(redisKey, cacheValue);
+        // 获取封装类
+        return ResultUtils.success(pictureVOPage);
     }
 
     /**
