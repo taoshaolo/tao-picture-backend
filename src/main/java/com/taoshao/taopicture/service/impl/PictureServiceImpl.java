@@ -3,7 +3,10 @@ package com.taoshao.taopicture.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -118,15 +121,27 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture picture = new Picture();
         picture.setUrl(uploadPictureResult.getUrl());
         picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
-        // 支持外层传递图片名称
+        // 支持外层传递
         String picName = uploadPictureResult.getPicName();
-        if (pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
-            picName = pictureUploadRequest.getPicName();
+        if (pictureUploadRequest!= null) {
+            // 优先使用 pictureUploadRequest 中的 图片名称，如果不为空
+            if (StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
+                picName = pictureUploadRequest.getPicName();
+            }
+            // 分类
+            if (StrUtil.isNotBlank(pictureUploadRequest.getCategory())) {
+                picture.setCategory(pictureUploadRequest.getCategory());
+            }
+            // 标签
+            if (StrUtil.isNotBlank(pictureUploadRequest.getTags())) {
+                picture.setTags(pictureUploadRequest.getTags());
+            }
+            // 简介
+            if (StrUtil.isNotBlank(pictureUploadRequest.getIntroduction())) {
+                picture.setIntroduction(pictureUploadRequest.getIntroduction());
+            }
         }
         picture.setName(picName);
-        // todo 待完善
-//        picture.setCategory();
-//        picture.setTags();
         picture.setPicSize(uploadPictureResult.getPicSize());
         picture.setPicWidth(uploadPictureResult.getPicWidth());
         picture.setPicHeight(uploadPictureResult.getPicHeight());
@@ -300,6 +315,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
     }
 
+    /**
+     * 批量抓取和创建图片
+     * @param pictureUploadByBatchRequest
+     * @param loginUser
+     * @return
+     */
     @Override
     public Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser) {
         // 校验参数
@@ -310,8 +331,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (StrUtil.isBlank(namePrefix)){
             namePrefix = searchText;
         }
+        // 从第几个开始获取
+        int first = RandomUtil.randomInt(1, 301);
         // 抓取内容
-        String fetchUrl = String.format("https://cn.bing.com/images/async?q=%s&mmasync=1", searchText);
+        String fetchUrl = String.format("https://cn.bing.com/images/async?q=%s&first=%s&mmasync=1", searchText,first);
         Document document = null;
         try {
             document = Jsoup.connect(fetchUrl).get();
@@ -324,12 +347,29 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (ObjUtil.isEmpty(div)) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "获取页面失败");
         }
-        Elements imgElementList = div.select("img.mimg");
+//        Elements imgElementList = div.select("img.mimg");
+        // 修改选择器，获取包含完整数据的元素
+        Elements imgElementList = div.select("a.iusc");
+
         // 遍历元素，依次处理上传图片
         int uploadCount = 0;
         for (Element imgElement : imgElementList) {
             // 获取 src 属性
-            String fileUrl = imgElement.attr("src");
+//            String fileUrl = imgElement.attr("src");
+            String fileUrl;
+            String introduction;
+            String dataM = imgElement.attr("m");
+            try {
+                // 解析JSON字符串
+                JSONObject jsonObject = JSONUtil.parseObj(dataM);
+                // 获取murl字段（原始图片URL）
+                fileUrl = jsonObject.getStr("murl");
+                // 获取图片标题
+                introduction = jsonObject.getStr("t");
+            } catch (Exception e) {
+                log.error("解析图片数据失败", e);
+                continue;
+            }
             if (StrUtil.isBlank(fileUrl)) {
                 log.info("当前链接为空，已跳过：{}", fileUrl);
                 continue;
@@ -344,6 +384,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
             pictureUploadRequest.setFileUrl(fileUrl);
             pictureUploadRequest.setPicName(namePrefix + (uploadCount + 1));
+            pictureUploadRequest.setIntroduction(introduction);
+            pictureUploadRequest.setCategory(pictureUploadByBatchRequest.getCategory());
+            pictureUploadRequest.setTags(JSONUtil.toJsonStr(pictureUploadByBatchRequest.getTags()));
 
             try {
                 PictureVO pictureVO = this.uploadPicture(fileUrl, pictureUploadRequest, loginUser);
