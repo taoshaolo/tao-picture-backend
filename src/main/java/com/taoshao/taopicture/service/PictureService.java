@@ -10,6 +10,7 @@ import com.taoshao.taopicture.model.dto.picture.PictureUploadRequest;
 import com.taoshao.taopicture.model.entity.Picture;
 import com.taoshao.taopicture.model.entity.User;
 import com.taoshao.taopicture.model.vo.PictureVO;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -78,4 +79,10 @@ public interface PictureService extends IService<Picture> {
      */
     Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser);
 
+    /**
+     * 清理图片文件
+     * @param oldPicture
+     */
+    @Async
+    void clearPictureFile(Picture oldPicture);
 }
