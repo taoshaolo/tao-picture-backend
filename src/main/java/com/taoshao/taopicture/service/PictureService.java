@@ -3,10 +3,7 @@ package com.taoshao.taopicture.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.taoshao.taopicture.model.dto.picture.PictureQueryRequest;
-import com.taoshao.taopicture.model.dto.picture.PictureReviewRequest;
-import com.taoshao.taopicture.model.dto.picture.PictureUploadByBatchRequest;
-import com.taoshao.taopicture.model.dto.picture.PictureUploadRequest;
+import com.taoshao.taopicture.model.dto.picture.*;
 import com.taoshao.taopicture.model.entity.Picture;
 import com.taoshao.taopicture.model.entity.User;
 import com.taoshao.taopicture.model.vo.PictureVO;
@@ -35,6 +32,20 @@ public interface PictureService extends IService<Picture> {
      * @return
      */
     PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser);
+
+    /**
+     * 删除空间
+     * @param pictureId
+     * @param loginUser
+     */
+    void deletePicture(long pictureId, User loginUser);
+
+    /**
+     * 编辑图片（给用户使用）
+     * @param pictureEditRequest
+     * @param loginUser
+     */
+    void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
 
     /**
      * 分页获取图片封装 （分页）
@@ -67,6 +78,12 @@ public interface PictureService extends IService<Picture> {
      */
     void doPictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
 
+    /**
+     * 填充审核参数
+     *
+     * @param picture
+     * @param loginUser
+     */
     void fillReviewParams(Picture picture, User loginUser);
 
     /**
@@ -84,4 +101,11 @@ public interface PictureService extends IService<Picture> {
      */
     @Async
     void clearPictureFile(Picture oldPicture);
+
+    /**
+     * 校验空间图片的权限
+     * @param loginUser
+     * @param picture
+     */
+    void checkPictureAuth(User loginUser, Picture picture);
 }
