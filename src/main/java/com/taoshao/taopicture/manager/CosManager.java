@@ -1,6 +1,7 @@
 package com.taoshao.taopicture.manager;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.exception.CosClientException;
 import com.qcloud.cos.model.COSObject;
@@ -94,7 +95,7 @@ public class CosManager {
             PicOperations.Rule thumbnailRule = new PicOperations.Rule();
             thumbnailRule.setBucket(cosClientConfig.getBucket());
             String suffix = FileUtil.getSuffix(key);
-            if (suffix == null) {
+            if (StrUtil.isEmpty(suffix)) {
                 suffix = "png";
             }
             String thumbnailKey = FileUtil.mainName(key) + "_thumbnail." + suffix;
