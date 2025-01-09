@@ -328,8 +328,8 @@ public class PictureController {
     @GetMapping("/tag_category")
     public BaseResponse<PictureTagCategory> listPictureTagCategory() {
         PictureTagCategory pictureTagCategory = new PictureTagCategory();
-        List<String> categoryList = Arrays.asList("热门", "表情包", "头像", "电脑壁纸", "手机壁纸");
-        List<String> tagList = Arrays.asList("搞笑", "高清", "动漫", "游戏", "男生", "女生");
+        List<String> categoryList = Arrays.asList("热门", "表情包", "头像", "电脑壁纸", "手机壁纸", "其他");
+        List<String> tagList = Arrays.asList("搞笑", "高清", "动漫", "游戏", "风景", "男生", "女生", "logo");
         pictureTagCategory.setTagList(tagList);
         pictureTagCategory.setCategoryList(categoryList);
         return ResultUtils.success(pictureTagCategory);
@@ -364,6 +364,7 @@ public class PictureController {
 
     /**
      * 以图搜图
+     *
      * @param searchPictureByPictureRequest
      * @return
      */
@@ -382,6 +383,7 @@ public class PictureController {
 
     /**
      * 按照颜色搜索图片
+     *
      * @param searchPictureByColorRequest
      * @param request
      * @return
@@ -396,5 +398,19 @@ public class PictureController {
         return ResultUtils.success(result);
     }
 
+    /**
+     * 批量编辑图片
+     *
+     * @param pictureEditByBatchRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/edit/batch")
+    public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureEditByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
+        return ResultUtils.success(true);
+    }
 
 }

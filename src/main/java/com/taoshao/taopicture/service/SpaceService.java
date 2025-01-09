@@ -3,6 +3,7 @@ package com.taoshao.taopicture.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.taoshao.taopicture.model.dto.picture.PictureEditByBatchRequest;
 import com.taoshao.taopicture.model.dto.space.SpaceAddRequest;
 import com.taoshao.taopicture.model.dto.space.SpaceQueryRequest;
 import com.taoshao.taopicture.model.entity.Space;
@@ -55,7 +56,6 @@ public interface SpaceService extends IService<Space> {
      * @return
      */
     QueryWrapper<Space> getQueryWrapper(SpaceQueryRequest spaceQueryRequest);
-
 
     /**
      * 根据空间级别填充空间对象
