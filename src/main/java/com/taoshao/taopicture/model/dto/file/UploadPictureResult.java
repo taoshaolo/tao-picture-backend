@@ -3,6 +3,7 @@ package com.taoshao.taopicture.model.dto.file;
 import lombok.Data;
 
 /**
+ * 上传图片的结果
  * @Author taoshao
  * @Date 2025/1/5
  */
@@ -48,5 +49,11 @@ public class UploadPictureResult {
      * 图片格式
      */
     private String picFormat;
+
+    /**
+     * 图片主色调
+     */
+    private String picColor;
+
 
 }
