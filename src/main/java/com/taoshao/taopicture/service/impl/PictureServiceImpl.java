@@ -1,4 +1,7 @@
 package com.taoshao.taopicture.service.impl;
+import com.taoshao.taopicture.api.aliyunai.AliYunAiApi;
+import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskRequest.Input;
+import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskRequest.Parameters;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
@@ -10,6 +13,8 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskRequest;
+import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.taoshao.taopicture.common.ErrorCode;
 import com.taoshao.taopicture.exception.BusinessException;
 import com.taoshao.taopicture.exception.ThrowUtils;
@@ -78,6 +83,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private CosManager cosManager;
+
+    @Resource
+    private AliYunAiApi aliYunAiApi;
 
     @Resource
     private TransactionTemplate transactionTemplate;
@@ -666,6 +674,25 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 5.操作数据库进行批量更新
         boolean result = this.updateBatchById(pictureList);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "批量编辑失败");
+    }
+
+    @Override
+    public CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser) {
+        // 获取图片信息
+        Long pictureId = createPictureOutPaintingTaskRequest.getPictureId();
+        Picture picture = Optional.ofNullable(this.getById(pictureId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在"));
+        // 校验权限
+        checkPictureAuth(loginUser, picture);
+        // 创建扩图任务
+        CreateOutPaintingTaskRequest createOutPaintingTaskRequest = new CreateOutPaintingTaskRequest();
+        CreateOutPaintingTaskRequest.Input input = new Input();
+        input.setImageUrl(picture.getUrl());
+        createOutPaintingTaskRequest.setInput(input);
+        createOutPaintingTaskRequest.setParameters(createPictureOutPaintingTaskRequest.getParameters());
+        // 创建任务
+        return aliYunAiApi.createOutPaintingTask(createOutPaintingTaskRequest);
+
     }
 
     /**

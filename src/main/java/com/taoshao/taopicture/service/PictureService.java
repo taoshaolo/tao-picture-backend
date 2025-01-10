@@ -3,6 +3,7 @@ package com.taoshao.taopicture.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.taoshao.taopicture.model.dto.picture.*;
 import com.taoshao.taopicture.model.entity.Picture;
 import com.taoshao.taopicture.model.entity.User;
@@ -126,4 +127,11 @@ public interface PictureService extends IService<Picture> {
      */
     void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
 
+    /**
+     * 创建扩展任务
+     * @param createPictureOutPaintingTaskRequest
+     * @param loginUser
+     * @return
+     */
+    CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
 }
