@@ -20,14 +20,9 @@ public class UserQueryRequest extends PageRequest implements Serializable {
     private Long id;
 
     /**
-     * 开放平台id
+     * 性别 0-男 1-女
      */
-    private String unionId;
-
-    /**
-     * 公众号openId
-     */
-    private String mpOpenId;
+    private Integer sex;
 
     /**
      * 用户昵称

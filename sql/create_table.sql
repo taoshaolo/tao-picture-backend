@@ -25,6 +25,11 @@ create table if not exists user
     INDEX idx_userName (userName)
 ) comment '用户' collate = utf8mb4_unicode_ci;
 
+-- 添加新列
+ALTER TABLE user
+    -- 添加新列
+    ADD COLUMN sex tinyint default 0 not null comment '性别：0男,1女';
+
 -- 会员功能
 # vipExpireTime datetime     null comment '会员过期时间',
 # vipCode       varchar(128) null comment '会员兑换码',
@@ -35,7 +40,6 @@ create table if not exists user
 # inviteUser    bigint       DEFAULT NULL COMMENT '邀请用户 id'
 
 
-
 -- 图片表
 create table if not exists picture
 (
@@ -44,7 +48,7 @@ create table if not exists picture
     name         varchar(128)                       not null comment '图片名称',
     introduction varchar(512)                       null comment '简介',
     category     varchar(64)                        null comment '分类',
-    tags         varchar(512)                      null comment '标签（JSON 数组）',
+    tags         varchar(512)                       null comment '标签（JSON 数组）',
     picSize      bigint                             null comment '图片体积',
     picWidth     int                                null comment '图片宽度',
     picHeight    int                                null comment '图片高度',
@@ -64,10 +68,10 @@ create table if not exists picture
 
 ALTER TABLE picture
     -- 添加新列
-    ADD COLUMN reviewStatus INT DEFAULT 0 NOT NULL COMMENT '审核状态：0-待审核; 1-通过; 2-拒绝',
-    ADD COLUMN reviewMessage VARCHAR(512) NULL COMMENT '审核信息',
-    ADD COLUMN reviewerId BIGINT NULL COMMENT '审核人 ID',
-    ADD COLUMN reviewTime DATETIME NULL COMMENT '审核时间';
+    ADD COLUMN reviewStatus  INT DEFAULT 0 NOT NULL COMMENT '审核状态：0-待审核; 1-通过; 2-拒绝',
+    ADD COLUMN reviewMessage VARCHAR(512)  NULL COMMENT '审核信息',
+    ADD COLUMN reviewerId    BIGINT        NULL COMMENT '审核人 ID',
+    ADD COLUMN reviewTime    DATETIME      NULL COMMENT '审核时间';
 
 -- 创建基于 reviewStatus 列的索引
 CREATE INDEX idx_reviewStatus ON picture (reviewStatus);
@@ -101,7 +105,7 @@ create table if not exists space
 
 -- 添加新列
 ALTER TABLE picture
-    ADD COLUMN spaceId  bigint  null comment '空间 id（为空表示公共空间）';
+    ADD COLUMN spaceId bigint null comment '空间 id（为空表示公共空间）';
 
 -- 创建索引
 CREATE INDEX idx_spaceId ON picture (spaceId);

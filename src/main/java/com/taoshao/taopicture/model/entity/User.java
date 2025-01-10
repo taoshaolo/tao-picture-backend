@@ -40,6 +40,11 @@ public class User implements Serializable {
     private String userName;
 
     /**
+     * 用户性别 0-男 1-女
+     */
+    private Integer sex;
+
+    /**
      * 用户头像
      */
     private String userAvatar;
