@@ -27,7 +27,7 @@ create table if not exists user
 
 -- 添加新列
 ALTER TABLE user
-    -- 添加新列
+    -- 添加性别
     ADD COLUMN sex tinyint default 0 not null comment '性别：0男,1女';
 
 -- 会员功能
@@ -80,6 +80,10 @@ CREATE INDEX idx_reviewStatus ON picture (reviewStatus);
 ALTER TABLE picture
     -- 添加新列
     ADD COLUMN thumbnailUrl varchar(512) NULL COMMENT '缩略图 url';
+
+-- 添加新列
+ALTER TABLE picture
+    ADD COLUMN originalUrl varchar(512) NULL COMMENT '原图 url';
 
 
 -- 空间表

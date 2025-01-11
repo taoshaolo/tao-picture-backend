@@ -179,6 +179,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setSpaceId(spaceId);
         picture.setUrl(uploadPictureResult.getUrl());
         picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
+        // 原图地址
+        picture.setOriginalUrl(uploadPictureResult.getOriginalUrl());
         // 支持外层传递
         String picName = uploadPictureResult.getPicName();
         if (pictureUploadRequest != null) {
@@ -565,6 +567,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             if (StrUtil.isNotBlank(thumbnailUrl)) {
                 String thumbnailPath = new URL(thumbnailUrl).getPath();
                 cosManager.deleteObject(thumbnailPath);
+            }
+            // 清理原图
+            String originalUrl = oldPicture.getOriginalUrl();
+            if (StrUtil.isNotBlank(originalUrl)) {
+                String originalPath = new URL(originalUrl).getPath();
+                cosManager.deleteObject(originalPath);
             }
         } catch (MalformedURLException e) {
             log.error("处理图片删除时遇到格式错误的 URL。图片 URL: {}", pictureUrl, e);

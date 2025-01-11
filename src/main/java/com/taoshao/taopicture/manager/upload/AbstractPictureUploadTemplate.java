@@ -78,7 +78,7 @@ public abstract class AbstractPictureUploadTemplate {
                     thumbnailCiObject = objectList.get(1);
                 }
                 // 封装返回结果
-                return buildResult(originFilename, compressedCiObject, thumbnailCiObject, imageInfo);
+                return buildResult(originFilename, compressedCiObject, thumbnailCiObject,uploadPath, imageInfo);
             }
             // 5. 封装返回结果  
             return buildResult(originFilename, file, uploadPath, imageInfo);
@@ -97,10 +97,12 @@ public abstract class AbstractPictureUploadTemplate {
      * @param originFilename     原始文件名
      * @param compressedCiObject 压缩后的对象
      * @param thumbnailCiObject  缩略图对象
+     * @param uploadPath         原图地址
      * @param imageInfo          图片信息
      * @return
      */
     private UploadPictureResult buildResult(String originFilename, CIObject compressedCiObject, CIObject thumbnailCiObject,
+                                            String uploadPath,
                                             ImageInfo imageInfo) {
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         int picWidth = compressedCiObject.getWidth();
@@ -117,6 +119,8 @@ public abstract class AbstractPictureUploadTemplate {
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + compressedCiObject.getKey());
         // 设置可访问的地址
         uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
+        // 设置原图的地址
+        uploadPictureResult.setOriginalUrl(cosClientConfig.getHost() + uploadPath);
         return uploadPictureResult;
     }
 
