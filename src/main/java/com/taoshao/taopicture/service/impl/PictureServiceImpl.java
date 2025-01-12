@@ -1,7 +1,4 @@
 package com.taoshao.taopicture.service.impl;
-import com.taoshao.taopicture.api.aliyunai.AliYunAiApi;
-import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskRequest.Input;
-import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskRequest.Parameters;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
@@ -13,7 +10,9 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.taoshao.taopicture.api.aliyunai.AliYunAiApi;
 import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskRequest;
+import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskRequest.Input;
 import com.taoshao.taopicture.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.taoshao.taopicture.common.ErrorCode;
 import com.taoshao.taopicture.exception.BusinessException;
@@ -54,8 +53,8 @@ import java.awt.*;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -119,10 +118,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (spaceId != null) {
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+            // 改为使用统一的权限校验
             // 校验是否空间的权限，仅空间管理员才能上传
-            if (!loginUser.getId().equals(space.getUserId())) {
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间权限");
-            }
+//            if (!loginUser.getId().equals(space.getUserId())) {
+//                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间权限");
+//            }
             // 校验额度
             if (space.getTotalCount() >= space.getMaxCount()) {
                 throw new BusinessException(ErrorCode.OPERATION_ERROR, "空间条数不足");
@@ -141,10 +141,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (pictureId != null) {
             oldPicture = this.getById(pictureId);
             ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+            // 改为使用统一的权限校验
             // 仅本人或管理员可以编辑图片
-            if (!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
-            }
+//            if (!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
+//                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+//            }
             // 校验空间是否一致
             // 没传 spaceId 则复用原有图片的 spaceId （这样也兼容了公告图库）
             if (spaceId == null) {
@@ -254,8 +255,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture oldPicture = this.getById(pictureId);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
         // 校验权限
-        checkPictureAuth(loginUser, oldPicture);
-
+//        checkPictureAuth(loginUser, oldPicture);
         // 操作数据库
         boolean result = this.removeById(pictureId);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -289,7 +289,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture oldPicture = this.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
         // 校验权限
-        checkPictureAuth(loginUser, oldPicture);
+//        checkPictureAuth(loginUser, oldPicture);
         // 补充审核参数
         this.fillReviewParams(picture, loginUser);
         // 操作数据库
@@ -691,7 +691,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture picture = Optional.ofNullable(this.getById(pictureId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在"));
         // 校验权限
-        checkPictureAuth(loginUser, picture);
+//        checkPictureAuth(loginUser, picture);
         // 创建扩图任务
         CreateOutPaintingTaskRequest createOutPaintingTaskRequest = new CreateOutPaintingTaskRequest();
         CreateOutPaintingTaskRequest.Input input = new Input();

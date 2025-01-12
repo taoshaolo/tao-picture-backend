@@ -1,6 +1,5 @@
 package com.taoshao.taopicture.controller;
 
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.taoshao.taopicture.annotation.AuthCheck;
 import com.taoshao.taopicture.common.BaseResponse;
@@ -10,6 +9,7 @@ import com.taoshao.taopicture.common.ResultUtils;
 import com.taoshao.taopicture.constant.UserConstant;
 import com.taoshao.taopicture.exception.BusinessException;
 import com.taoshao.taopicture.exception.ThrowUtils;
+import com.taoshao.taopicture.manager.auth.SpaceUserAuthManager;
 import com.taoshao.taopicture.model.dto.space.*;
 import com.taoshao.taopicture.model.entity.Space;
 import com.taoshao.taopicture.model.entity.User;
@@ -43,6 +43,9 @@ public class SpaceController {
 
     @Resource
     private SpaceService spaceService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     @PostMapping("/add")
     public BaseResponse<Long> addSpace(SpaceAddRequest spaceAddRequest, HttpServletRequest request) {
@@ -124,8 +127,12 @@ public class SpaceController {
         // 查询数据库
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
+        SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
         // 获取封装类
-        return ResultUtils.success(spaceService.getSpaceVO(space, request));
+        return ResultUtils.success(spaceVO);
     }
 
     /**

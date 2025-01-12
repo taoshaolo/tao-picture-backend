@@ -30,4 +30,10 @@ public interface UserConstant {
     String BAN_ROLE = "ban";
 
     // endregion
+
+    /**
+     * 账号校验 数字和字母 ^[A-Za-z0-9]+$
+     */
+    String ACCOUNT_REGEX = "^[A-Za-z0-9]+$";
+
 }

@@ -1,9 +1,9 @@
 package com.taoshao.taopicture;
 
+import org.apache.shardingsphere.spring.boot.ShardingSphereAutoConfiguration;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -15,7 +15,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 // 如需开启 Redis，须移除 exclude 中的内容
 //@SpringBootApplication(exclude = {RedisAutoConfiguration.class})
-@SpringBootApplication
+// 排除分库分表功能，并把 DynamicShardingManager的 @Component 注释掉
+@SpringBootApplication(exclude = {ShardingSphereAutoConfiguration.class})
 @MapperScan("com.taoshao.taopicture.mapper")
 @EnableScheduling
 @EnableAsync

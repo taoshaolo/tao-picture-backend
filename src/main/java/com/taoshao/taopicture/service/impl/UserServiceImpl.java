@@ -3,11 +3,12 @@ package com.taoshao.taopicture.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.taoshao.taopicture.common.ErrorCode;
 import com.taoshao.taopicture.constant.CommonConstant;
 import com.taoshao.taopicture.constant.UserConstant;
 import com.taoshao.taopicture.exception.BusinessException;
+import com.taoshao.taopicture.manager.auth.StpKit;
 import com.taoshao.taopicture.mapper.UserMapper;
-import com.taoshao.taopicture.common.ErrorCode;
 import com.taoshao.taopicture.model.dto.user.UserQueryRequest;
 import com.taoshao.taopicture.model.entity.User;
 import com.taoshao.taopicture.model.enums.UserRoleEnum;
@@ -15,15 +16,18 @@ import com.taoshao.taopicture.model.vo.LoginUserVO;
 import com.taoshao.taopicture.model.vo.UserVO;
 import com.taoshao.taopicture.service.UserService;
 import com.taoshao.taopicture.utils.SqlUtils;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static com.taoshao.taopicture.constant.UserConstant.ACCOUNT_REGEX;
 
 /**
  * 用户服务实现
@@ -46,7 +50,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         if (userAccount.length() < 4) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号过短");
+        }
+        // 账号只能数字和字母组成 ^[A-Za-z0-9]+$
+        if (!userAccount.matches(ACCOUNT_REGEX)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号只能数字和字母组成");
         }
         if (userPassword.length() < 8 || checkPassword.length() < 8) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
@@ -105,6 +113,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         // 3. 记录用户的登录态
         request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
+        // 记录用户登录态到 Sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的信息过期时间一致
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }
 
