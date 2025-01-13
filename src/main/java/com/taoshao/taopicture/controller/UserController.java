@@ -2,37 +2,27 @@ package com.taoshao.taopicture.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.taoshao.taopicture.annotation.AuthCheck;
-import com.taoshao.taopicture.exception.BusinessException;
-import com.taoshao.taopicture.exception.ThrowUtils;
 import com.taoshao.taopicture.common.BaseResponse;
 import com.taoshao.taopicture.common.DeleteRequest;
 import com.taoshao.taopicture.common.ErrorCode;
 import com.taoshao.taopicture.common.ResultUtils;
 import com.taoshao.taopicture.constant.UserConstant;
-import com.taoshao.taopicture.model.dto.user.UserAddRequest;
-import com.taoshao.taopicture.model.dto.user.UserLoginRequest;
-import com.taoshao.taopicture.model.dto.user.UserQueryRequest;
-import com.taoshao.taopicture.model.dto.user.UserRegisterRequest;
-import com.taoshao.taopicture.model.dto.user.UserUpdateMyRequest;
-import com.taoshao.taopicture.model.dto.user.UserUpdateRequest;
+import com.taoshao.taopicture.exception.BusinessException;
+import com.taoshao.taopicture.exception.ThrowUtils;
+import com.taoshao.taopicture.model.dto.user.*;
 import com.taoshao.taopicture.model.entity.User;
 import com.taoshao.taopicture.model.vo.LoginUserVO;
 import com.taoshao.taopicture.model.vo.UserVO;
 import com.taoshao.taopicture.service.UserService;
-
-import java.util.List;
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
-
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.DigestUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 import static com.taoshao.taopicture.service.impl.UserServiceImpl.SALT;
 
@@ -215,8 +205,7 @@ public class UserController {
      */
     @GetMapping("/get/vo")
     public BaseResponse<UserVO> getUserVOById(long id, HttpServletRequest request) {
-        BaseResponse<User> response = getUserById(id, request);
-        User user = response.getData();
+        User user = userService.getById(id);
         return ResultUtils.success(userService.getUserVO(user));
     }
 

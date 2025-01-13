@@ -1,6 +1,7 @@
 package com.taoshao.taopicture.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.taoshao.taopicture.common.BaseResponse;
 import com.taoshao.taopicture.common.DeleteRequest;
 import com.taoshao.taopicture.common.ErrorCode;
@@ -14,6 +15,7 @@ import com.taoshao.taopicture.model.dto.spaceuser.SpaceUserEditRequest;
 import com.taoshao.taopicture.model.dto.spaceuser.SpaceUserQueryRequest;
 import com.taoshao.taopicture.model.entity.SpaceUser;
 import com.taoshao.taopicture.model.entity.User;
+import com.taoshao.taopicture.model.enums.SpaceRoleEnum;
 import com.taoshao.taopicture.model.vo.SpaceUserVO;
 import com.taoshao.taopicture.service.SpaceUserService;
 import com.taoshao.taopicture.service.UserService;
@@ -73,6 +75,19 @@ public class SpaceUserController {
     /**
      * 查询某个成员在某个空间的信息
      */
+    @PostMapping("/get/vo")
+    public BaseResponse<SpaceUserVO> getSpaceUserVO(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
+        // 参数校验
+        ThrowUtils.throwIf(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
+        Long spaceId = spaceUserQueryRequest.getSpaceId();
+        Long userId = spaceUserQueryRequest.getUserId();
+        ThrowUtils.throwIf(ObjectUtil.hasEmpty(spaceId, userId), ErrorCode.PARAMS_ERROR);
+        // 查询数据库
+        SpaceUser spaceUser = spaceUserService.getOne(spaceUserService.getQueryWrapper(spaceUserQueryRequest));
+        ThrowUtils.throwIf(spaceUser == null, ErrorCode.NOT_FOUND_ERROR);
+        return ResultUtils.success(SpaceUserVO.objToVo(spaceUser));
+    }
+
     @PostMapping("/get")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<SpaceUser> getSpaceUser(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
@@ -120,6 +135,16 @@ public class SpaceUserController {
         long id = spaceUserEditRequest.getId();
         SpaceUser oldSpaceUser = spaceUserService.getById(id);
         ThrowUtils.throwIf(oldSpaceUser == null, ErrorCode.NOT_FOUND_ERROR);
+        // 管理员不能修改自己的角色
+        User loginUser = userService.getLoginUser(request);
+        Long userId = loginUser.getId();
+        SpaceUser one = spaceUserService.getOne(new QueryWrapper<SpaceUser>().eq("userId", userId)
+                .eq("spaceId", oldSpaceUser.getSpaceId()));
+        ThrowUtils.throwIf(one == null, ErrorCode.NOT_FOUND_ERROR);
+        if (SpaceRoleEnum.ADMIN.getValue().equals(one.getSpaceRole())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_ERROR, "管理员不能修改自己的角色");
+        }
+
         // 操作数据库
         boolean result = spaceUserService.updateById(spaceUser);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);

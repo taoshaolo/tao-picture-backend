@@ -214,7 +214,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
 
         // 排序
-        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), "ascend".equals(sortOrder), sortField);
         return queryWrapper;
     }
 
@@ -235,8 +235,8 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Override
     public void checkSpaceAuth(Space space, User loginUser) {
-        // 仅是管理员和创建者才允许操作
-        if (!loginUser.getId().equals(space.getUserId())) {
+        // 仅是管理员或创建者才允许操作
+        if (!loginUser.getId().equals(space.getUserId()) && !userService.isAdmin(loginUser)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间权限");
         }
     }
