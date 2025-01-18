@@ -8,23 +8,23 @@ import com.taoshao.taopicture.common.ErrorCode;
 import com.taoshao.taopicture.common.ResultUtils;
 import com.taoshao.taopicture.exception.BusinessException;
 import com.taoshao.taopicture.exception.ThrowUtils;
+import com.taoshao.taopicture.manager.auth.SpaceUserAuthManager;
 import com.taoshao.taopicture.manager.auth.annotation.SaSpaceCheckPermission;
 import com.taoshao.taopicture.manager.auth.model.SpaceUserPermissionConstant;
 import com.taoshao.taopicture.model.dto.spaceuser.SpaceUserAddRequest;
 import com.taoshao.taopicture.model.dto.spaceuser.SpaceUserEditRequest;
 import com.taoshao.taopicture.model.dto.spaceuser.SpaceUserQueryRequest;
+import com.taoshao.taopicture.model.entity.Space;
 import com.taoshao.taopicture.model.entity.SpaceUser;
 import com.taoshao.taopicture.model.entity.User;
 import com.taoshao.taopicture.model.enums.SpaceRoleEnum;
 import com.taoshao.taopicture.model.vo.SpaceUserVO;
+import com.taoshao.taopicture.service.SpaceService;
 import com.taoshao.taopicture.service.SpaceUserService;
 import com.taoshao.taopicture.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -40,6 +40,12 @@ public class SpaceUserController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private SpaceService spaceService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     /**
      * 添加成员到空间
@@ -63,9 +69,14 @@ public class SpaceUserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         long id = deleteRequest.getId();
+        User loginUser = userService.getLoginUser(request);
         // 判断是否存在
         SpaceUser oldSpaceUser = spaceUserService.getById(id);
         ThrowUtils.throwIf(oldSpaceUser == null, ErrorCode.NOT_FOUND_ERROR);
+        // 确保不能删除自己
+        if (loginUser.getId().equals(oldSpaceUser.getUserId())) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "不能删除自己");
+        }
         // 操作数据库
         boolean result = spaceUserService.removeById(id);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -106,7 +117,7 @@ public class SpaceUserController {
      * 查询成员信息列表
      */
     @PostMapping("/list")
-    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_VIEW)
     public BaseResponse<List<SpaceUserVO>> listSpaceUser(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest,
                                                          HttpServletRequest request) {
         ThrowUtils.throwIf(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
@@ -163,5 +174,19 @@ public class SpaceUserController {
                 spaceUserService.getQueryWrapper(spaceUserQueryRequest)
         );
         return ResultUtils.success(spaceUserService.getSpaceUserVOList(spaceUserList));
+    }
+
+    /**
+     * 获取权限列表
+     *
+     * @param id 空间id
+     * @param request
+     * @return
+     */
+    @GetMapping("/permission/list")
+    public BaseResponse<List<String>> getPermissionList(long id, HttpServletRequest request) {
+        Space space = spaceService.getById(id);
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(spaceUserAuthManager.getPermissionList(space, loginUser));
     }
 }
