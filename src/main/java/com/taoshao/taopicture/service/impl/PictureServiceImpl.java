@@ -42,6 +42,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,6 +90,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Resource
     private TransactionTemplate transactionTemplate;
 
+    @Resource
+    private ApplicationContext applicationContext;
+
 
     @Override
     public void validPicture(Picture picture) {
@@ -109,7 +113,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+//    @Transactional(rollbackFor = Exception.class)
     public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         // 校验参数
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
@@ -226,21 +230,24 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
         // 开启事务
         Long finalSpaceId = spaceId;
-//        transactionTemplate.execute(status -> {
-        // 插入数据
-        boolean result = this.saveOrUpdate(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.PARAMS_ERROR, "图片上传失败，数据库操作失败");
-        if (finalSpaceId != null) {
+        transactionTemplate.execute(status -> {
+            // 插入数据
+            // 事务失效
+            // @Transactional self-invocation（实际上，目标对象中的方法调用目标对象中的另一个方法）不会在运行时导致实际事务
+//            boolean result = this.saveOrUpdate(picture);
+            boolean result = applicationContext.getBean(PictureService.class).saveOrUpdate(picture);
+            ThrowUtils.throwIf(!result, ErrorCode.PARAMS_ERROR, "图片上传失败，数据库操作失败");
             // 更新空间的使用额度
-            boolean update = spaceService.lambdaUpdate()
-                    .eq(Space::getId, finalSpaceId)
-                    .setSql("totalSize = totalSize + " + picture.getPicSize())
-                    .setSql("totalCount = totalCount + 1")
-                    .update();
-            ThrowUtils.throwIf(!update, ErrorCode.PARAMS_ERROR, "额度更新失败");
-        }
-//            return picture;
-//        });
+            if (finalSpaceId != null) {
+                boolean update = spaceService.lambdaUpdate()
+                        .eq(Space::getId, finalSpaceId)
+                        .setSql("totalSize = totalSize + " + picture.getPicSize())
+                        .setSql("totalCount = totalCount + 1")
+                        .update();
+                ThrowUtils.throwIf(!update, ErrorCode.PARAMS_ERROR, "额度更新失败");
+            }
+            return picture;
+        });
 
         return PictureVO.objToVo(picture);
 
